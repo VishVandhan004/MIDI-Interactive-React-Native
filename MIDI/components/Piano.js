@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView, SafeAreaView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Switch,
+  ScrollView,
+  SafeAreaView,
+  ImageBackground,
+} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Slider } from '@miblanchard/react-native-slider';
 import instruments from '../instruments';
@@ -13,87 +21,113 @@ const Piano = () => {
   const blackKeys = { 0: 'W', 1: 'E', 3: 'T', 4: 'Y', 5: 'U', 7: 'O', 8: 'P' };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.head}>MIDI Musical Keyboard</Text>
-      <Text style={styles.label}>Select MIDI Instrument:</Text>
-      <Picker
-        selectedValue={instrument}
-        style={styles.picker}
-        onValueChange={setInstrument}
-      >
-        {instruments.map((inst, i) => (
-          <Picker.Item key={i} label={inst} value={inst} />
-        ))}
-      </Picker>
+    <ImageBackground
+      source={require('../assets/music.jpg')}
+      resizeMode="cover"
+      style={styles.background}
+    >
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.head}>MIDI Musical Keyboard</Text>
+        <Text style={styles.label}>Select MIDI Instrument:</Text>
 
-      <View style={styles.pianoContainer}>
-        <View style={styles.header}>
-          <Text style={styles.title}>PIANO</Text>
-          <View style={styles.volumeContainer}>
-            <Text style={styles.volumeLabel}>Volume</Text>
-            <Slider
-              value={[volume]}
-              onValueChange={([val]) => setVolume(val)}
-              minimumValue={0}
-              maximumValue={1}
-              step={0.01}
-              style={styles.slider}
-              minimumTrackTintColor="#fff"   // White fill for lower track
-              maximumTrackTintColor="#ccc"  // Light grey for upper track
-              thumbTintColor="#fff"         // White thumb
-            />
-          </View>
-          <View style={styles.switchContainer}>
-            <Text style={styles.volumeLabel}>Show Keys</Text>
-            <Switch
-              value={showKeys}
-              onValueChange={setShowKeys}
-              trackColor={{ false: '#666', true: '#999' }}
-              thumbColor={showKeys ? '#fff' : '#ccc'}
-            />
-          </View>
-        </View>
-
-        <ScrollView horizontal contentContainerStyle={styles.keys}>
-          {whiteKeys.map((key, i) => (
-            <View key={i} style={styles.whiteKey}>
-              {showKeys && <Text style={styles.whiteKeyLabel}>{key}</Text>}
-              {blackKeys[i] && (
-                <View style={styles.blackKey}>
-                  {showKeys && <Text style={styles.blackKeyLabel}>{blackKeys[i]}</Text>}
-                </View>
-              )}
-            </View>
+        <Picker
+          mode="dropdown"
+          selectedValue={instrument}
+          style={styles.picker}
+          onValueChange={setInstrument}
+          dropdownIconColor="#000"
+        >
+          {instruments.map((inst, i) => (
+            <Picker.Item key={i} label={inst} value={inst} color="#000" />
           ))}
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+        </Picker>
+
+        <View style={styles.pianoContainer}>
+          <View style={styles.header}>
+            <Text style={styles.title}>PIANO</Text>
+            <View style={styles.volumeContainer}>
+              <Text style={styles.volumeLabel}>Volume</Text>
+              <Slider
+                value={[volume]}
+                onValueChange={([val]) => setVolume(val)}
+                minimumValue={0}
+                maximumValue={1}
+                step={0.01}
+                style={styles.slider}
+                minimumTrackTintColor="#fff"
+                maximumTrackTintColor="#ccc"
+                thumbTintColor="#fff"
+              />
+            </View>
+            <View style={styles.switchContainer}>
+              <Text style={styles.volumeLabel}>Show Keys</Text>
+              <Switch
+                value={showKeys}
+                onValueChange={setShowKeys}
+                trackColor={{ false: '#666', true: '#999' }}
+                thumbColor={showKeys ? '#fff' : '#ccc'}
+              />
+            </View>
+          </View>
+
+          <ScrollView horizontal contentContainerStyle={styles.keys}>
+            {whiteKeys.map((key, i) => (
+              <View key={i} style={styles.whiteKey}>
+                {showKeys && <Text style={styles.whiteKeyLabel}>{key}</Text>}
+                {blackKeys[i] && (
+                  <View style={styles.blackKey}>
+                    {showKeys && (
+                      <Text style={styles.blackKeyLabel}>
+                        {blackKeys[i]}
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+    </ImageBackground>
   );
 };
 
 export default Piano;
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#AED2FF',  // light grey background
-    paddingTop: 70,               // more top space for dropdown
+    backgroundColor: 'transparent',
+    paddingTop: 70,
     paddingHorizontal: 20,
   },
   head: {
     fontSize: 30,
-    color: '#333',                // dark grey for the header
+    color: '#fff',
     fontWeight: 'bold',
     textAlign: 'center',
     marginTop: 20,
     marginBottom: 60,
   },
-  label: { 
-    fontSize: 20,   
+  label: {
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 30 
+    marginBottom: 30,
+    color: '#fff',
   },
-  picker: { height: 50, width: '100%', marginBottom: 20, zIndex: 10 },
+  picker: {
+    height: 50,
+    width: '100%',
+    marginBottom: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.8)', // light white background for picker
+    color: '#000', // Black text color for visibility
+  },
   pianoContainer: {
     backgroundColor: '#111',
     borderRadius: 20,
