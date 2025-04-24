@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,11 @@ import {
   ScrollView,
   SafeAreaView,
   ImageBackground,
+  TouchableOpacity,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Slider } from '@miblanchard/react-native-slider';
+import { Audio } from 'expo-av';
 import instruments from '../instruments';
 
 const Piano = () => {
@@ -19,6 +21,49 @@ const Piano = () => {
 
   const whiteKeys = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
   const blackKeys = { 0: 'W', 1: 'E', 3: 'T', 4: 'Y', 5: 'U', 7: 'O', 8: 'P' };
+
+  // 🎵 Swara labels instead of numbers
+  const swaraLabels = ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni', "Sa'", "Ri'"];
+
+  const keyToNote = {
+    A: require('../assets/sounds/1.mp3'),
+    S: require('../assets/sounds/2.mp3'),
+    D: require('../assets/sounds/3.mp3'),
+    F: require('../assets/sounds/4.mp3'),
+    G: require('../assets/sounds/5.mp3'),
+    H: require('../assets/sounds/6.mp3'),
+    J: require('../assets/sounds/7.mp3'),
+    K: require('../assets/sounds/8.mp3'),
+    L: require('../assets/sounds/9.mp3'),
+  };
+
+  const soundsRef = useRef({});
+
+  useEffect(() => {
+    const loadSounds = async () => {
+      for (let key in keyToNote) {
+        const { sound } = await Audio.Sound.createAsync(keyToNote[key]);
+        soundsRef.current[key] = sound;
+      }
+    };
+
+    loadSounds();
+
+    return () => {
+      for (let sound of Object.values(soundsRef.current)) {
+        sound.unloadAsync();
+      }
+    };
+  }, []);
+
+  const playNote = async (key) => {
+    const sound = soundsRef.current[key];
+    if (sound) {
+      await sound.setPositionAsync(0);
+      await sound.setVolumeAsync(volume);
+      await sound.playAsync();
+    }
+  };
 
   return (
     <ImageBackground
@@ -72,8 +117,8 @@ const Piano = () => {
 
           <ScrollView horizontal contentContainerStyle={styles.keys}>
             {whiteKeys.map((key, i) => (
-              <View key={i} style={styles.whiteKey}>
-                {showKeys && <Text style={styles.whiteKeyLabel}>{key}</Text>}
+              <TouchableOpacity key={i} style={styles.whiteKey} onPress={() => playNote(key)}>
+                {showKeys && <Text style={styles.whiteKeyLabel}>{swaraLabels[i]}</Text>}
                 {blackKeys[i] && (
                   <View style={styles.blackKey}>
                     {showKeys && (
@@ -83,7 +128,7 @@ const Piano = () => {
                     )}
                   </View>
                 )}
-              </View>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
@@ -125,8 +170,9 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 20,
     zIndex: 10,
-    backgroundColor: 'rgba(255,255,255,0.8)', // light white background for picker
-    color: '#000', // Black text color for visibility
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    color: '#000',
+    borderRadius: 6,
   },
   pianoContainer: {
     backgroundColor: '#111',
@@ -144,7 +190,7 @@ const styles = StyleSheet.create({
   title: { color: '#ccc', fontSize: 20, fontWeight: 'bold' },
   volumeContainer: { alignItems: 'center' },
   volumeLabel: { color: '#fff', marginBottom: 5 },
-  slider: { width: 120, height: 40 },
+  slider: { width: 160, height: 40 },
   switchContainer: { alignItems: 'center' },
   keys: { flexDirection: 'row', position: 'relative', height: 180 },
   whiteKey: {
