@@ -12,10 +12,12 @@ import {
   TouchableOpacity,
   Dimensions,
   Modal,
+  Alert,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Slider } from '@miblanchard/react-native-slider';
 import { Audio } from 'expo-av';
+import * as Sharing from 'expo-sharing';
 import instruments from '../instruments';
 
 const screenWidth = Dimensions.get('window').width;
@@ -30,7 +32,9 @@ const Piano = () => {
   const [recording, setRecording] = useState(false);
   const [events, setEvents] = useState([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [recordingUri, setRecordingUri] = useState(null);
   const startTime = useRef(0);
+  const recordingRef = useRef(null);
 
   const whiteKeys = ['A','S','D','F','G','H','J','K','L'];
   const blackKeys = {0:'W',1:'E',3:'T',4:'Y',5:'U',7:'O',8:'P'};
@@ -107,10 +111,58 @@ const Piano = () => {
     animateKey(i, 1);
   };
 
-  const startRecording = () => { setEvents([]); startTime.current = Date.now(); setRecording(true); };
-  const stopRecording = () => setRecording(false);
+  const startRecording = async () => {
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Microphone access is needed.');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+
+      recordingRef.current = recording;
+      startTime.current = Date.now();
+      setEvents([]);
+      setRecording(true);
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      setRecording(false);
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      setRecordingUri(uri);
+    } catch (err) {
+      console.error('Stop recording error', err);
+    }
+  };
+
   const playBack = () => events.forEach(({ key, time }) => setTimeout(() => playNote(key), time));
-  const exportAsMP3 = () => alert('Export feature coming soon!');
+
+  const shareRecording = async () => {
+    if (!recordingUri) {
+      Alert.alert('No recording found', 'Please record something first.');
+      return;
+    }
+
+    try {
+      await Sharing.shareAsync(recordingUri);
+    } catch (error) {
+      console.error('Sharing failed', error);
+      Alert.alert('Error', 'Failed to share recording.');
+    }
+  };
 
   return (
     <ImageBackground source={require('../assets/music.jpg')} style={styles.background}>
@@ -123,7 +175,7 @@ const Piano = () => {
             {whiteKeys.map((key, i) => (
               <Pressable key={i}
                 onPressIn={() => handlePressIn(key, i)}
-                onPressOut={() => handlePressOut(key, i)}>
+                onPressOut={() => handlePressOut(key, i)} >
                 <Animated.View style={[
                   styles.whiteKey,
                   activeKeys.includes(key) && styles.highlightKey,
@@ -144,9 +196,8 @@ const Piano = () => {
           </ScrollView>
         </View>
 
-        {/* Settings button moved here */}
         <TouchableOpacity onPress={() => setShowSettings(true)} style={styles.settingsButton}>
-          <Text style={styles.settingsText}>⚙ Settings</Text>
+          <Text style={styles.settingsText}>⚙ Instrument Selection</Text>
         </TouchableOpacity>
 
         <View style={styles.controls}>
@@ -167,8 +218,12 @@ const Piano = () => {
             <Text style={styles.controlButtonText}>Play</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.controlButton} onPress={exportAsMP3}>
-            <Text style={styles.controlButtonText}>Export as MP3</Text>
+          <TouchableOpacity
+            style={[styles.controlButton, !recordingUri && styles.disabledButton]}
+            onPress={shareRecording}
+            disabled={!recordingUri}
+          >
+            <Text style={styles.controlButtonText}>Share Recording</Text>
           </TouchableOpacity>
         </View>
 
@@ -225,7 +280,6 @@ const Piano = () => {
 };
 
 export default Piano;
-
 const styles = StyleSheet.create({
   background: { flex: 1, width: '100%', height: '100%' },
   container: { flex: 1, backgroundColor: 'transparent', paddingTop: 70, paddingHorizontal: 20 },
