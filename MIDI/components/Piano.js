@@ -295,7 +295,7 @@ const Piano = () => {
         {detectedRaaga !== '' && (
           <Text style={styles.raagaLabel}>🎵 Detected Raaga: {detectedRaaga}</Text>
         )}
-
+                  {/* Modal settings */}
         <Modal visible={showSettings} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
