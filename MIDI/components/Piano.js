@@ -1,18 +1,8 @@
+// Piano.js
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Switch,
-  ScrollView,
-  SafeAreaView,
-  ImageBackground,
-  Animated,
-  Pressable,
-  TouchableOpacity,
-  Dimensions,
-  Modal,
-  Alert,
+  View, Text, StyleSheet, Switch, ScrollView, SafeAreaView, ImageBackground,
+  Animated, Pressable, TouchableOpacity, Dimensions, Modal, Alert,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Slider } from '@miblanchard/react-native-slider';
@@ -33,8 +23,13 @@ const Piano = () => {
   const [events, setEvents] = useState([]);
   const [showSettings, setShowSettings] = useState(false);
   const [recordingUri, setRecordingUri] = useState(null);
+  const [detectedRaaga, setDetectedRaaga] = useState('');
   const startTime = useRef(0);
   const recordingRef = useRef(null);
+
+  // --- Guided Mode additions ---
+  const [guidedMode, setGuidedMode] = useState(false);
+  const [selectedRaaga, setSelectedRaaga] = useState('Mohanam');
 
   const whiteKeys = ['A','S','D','F','G','H','J','K','L'];
   const blackKeys = {0:'W',1:'E',3:'T',4:'Y',5:'U',7:'O',8:'P'};
@@ -50,6 +45,38 @@ const Piano = () => {
     J: require('../assets/sounds/7.mp3'),
     K: require('../assets/sounds/8.mp3'),
     L: require('../assets/sounds/9.mp3'),
+  };
+
+  const keyToSwara = {
+    A: 'Sa', S: 'Ri', D: 'Ga', F: 'Ma', G: 'Pa',
+    H: 'Da', J: 'Ni', K: "Sa'", L: "Ri'"
+  };
+
+  const raagas = {
+    'Mayamalavagowla': ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni'],
+    'Shankarabharanam': ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni', "Sa'"],
+    'Mohanam': ['Sa', 'Ri', 'Ga', 'Pa', 'Da'],
+    'Kalyani': ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni'],
+    'Bilahari': ['Sa', 'Ri', 'Ga', 'Pa', 'Da', "Sa'"],
+    'Hamsadhwani': ['Sa', 'Ri', 'Ga', 'Pa', 'Ni'],
+    'Kharaharapriya': ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni'],
+    'Kambhoji': ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', "Sa'"],
+    'Abhogi': ['Sa', 'Ri', 'Ga', 'Ma', 'Da'],
+    'Durbar': ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Ni'],
+    'Revati': ['Sa', 'Ri', 'Ma', 'Pa', 'Ni'],
+    'Sankarabharanam': ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni'],
+    'Ritigowla': ['Sa', 'Ga', 'Ma', 'Pa', 'Da', 'Ni'],
+    'Charukesi': ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni'],
+    'Todi': ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni'],
+    'Sarasangi': ['Sa', 'Ri', 'Ga', 'Ma', 'Pa', 'Da', 'Ni'],
+  };
+  
+
+  // --- Guided Mode: check if a key is valid in selected raaga ---
+  const isKeyInRaaga = (key) => {
+    if (!guidedMode) return true;
+    const swara = keyToSwara[key];
+    return raagas[selectedRaaga]?.includes(swara);
   };
 
   const soundsRef = useRef({});
@@ -131,6 +158,7 @@ const Piano = () => {
       recordingRef.current = recording;
       startTime.current = Date.now();
       setEvents([]);
+      setDetectedRaaga('');
       setRecording(true);
     } catch (err) {
       console.error('Failed to start recording', err);
@@ -148,7 +176,43 @@ const Piano = () => {
     }
   };
 
-  const playBack = () => events.forEach(({ key, time }) => setTimeout(() => playNote(key), time));
+  const playBack = () => {
+    const normalize = (s) => s?.trim().replace(/\s+/g, '');
+  
+    const playedSequence = events
+      .map(e => normalize(keyToSwara[e.key]))
+      .filter(Boolean);
+  
+    let matched = '';
+  
+    for (const [name, pattern] of Object.entries(raagas)) {
+      const normalizedPattern = pattern.map(normalize);
+      let match = true;
+      let i = 0;
+  
+      for (let note of normalizedPattern) {
+        while (i < playedSequence.length && playedSequence[i] !== note) i++;
+        if (i === playedSequence.length) {
+          match = false;
+          break;
+        }
+        i++;
+      }
+  
+      if (match) {
+        matched = name;
+        break;
+      }
+    }
+  
+    setDetectedRaaga(matched || 'No known raaga matched');
+  
+    // Replay notes
+    events.forEach(({ key, time }) =>
+      setTimeout(() => playNote(key), time)
+    );
+  };
+  
 
   const shareRecording = async () => {
     if (!recordingUri) {
@@ -179,6 +243,7 @@ const Piano = () => {
                 <Animated.View style={[
                   styles.whiteKey,
                   activeKeys.includes(key) && styles.highlightKey,
+                  guidedMode && isKeyInRaaga(key) && styles.guidedKey, // <- Guided highlight
                   { width: keyWidth, transform: [{ scale: scaleRefs[i] }] },
                 ]}>
                   {showKeys && <Text style={styles.whiteKeyLabel}>{swaraLabels[i]}</Text>}
@@ -227,6 +292,10 @@ const Piano = () => {
           </TouchableOpacity>
         </View>
 
+        {detectedRaaga !== '' && (
+          <Text style={styles.raagaLabel}>🎵 Detected Raaga: {detectedRaaga}</Text>
+        )}
+
         <Modal visible={showSettings} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
@@ -268,6 +337,29 @@ const Piano = () => {
                   thumbColor={showKeys ? '#fff' : '#ccc'} />
               </View>
 
+              {/* --- Guided Mode toggle and picker --- */}
+              <View style={styles.switchContainer}>
+                <Text style={styles.volumeLabel}>Guided Mode</Text>
+                <Switch value={guidedMode}
+                  onValueChange={setGuidedMode}
+                  trackColor={{ false: '#666', true: '#999' }}
+                  thumbColor={guidedMode ? '#fff' : '#ccc'} />
+              </View>
+
+              {guidedMode && (
+                <>
+                  <Text style={styles.volumeLabel}>Select Raaga</Text>
+                  <Picker selectedValue={selectedRaaga}
+                    style={styles.picker}
+                    onValueChange={setSelectedRaaga}
+                    dropdownIconColor="#000">
+                    {Object.keys(raagas).map((raaga, i) => (
+                      <Picker.Item key={i} label={raaga} value={raaga} color="#000" />
+                    ))}
+                  </Picker>
+                </>
+              )}
+
               <TouchableOpacity onPress={() => setShowSettings(false)} style={styles.modalCloseButton}>
                 <Text style={styles.modalCloseText}>Close</Text>
               </TouchableOpacity>
@@ -280,7 +372,20 @@ const Piano = () => {
 };
 
 export default Piano;
+
 const styles = StyleSheet.create({
+  raagaLabel: {
+    color: '#fff',
+    textAlign: 'center',
+    fontSize: 18,
+    marginTop: 20,
+    fontWeight: 'bold',
+  },
+  guidedKey: {
+    borderColor: '#33f',
+    borderWidth: 2,
+  },
+  // ...rest of your existing styles unchanged
   background: { flex: 1, width: '100%', height: '100%' },
   container: { flex: 1, backgroundColor: 'transparent', paddingTop: 70, paddingHorizontal: 20 },
   head: { fontSize: 30, color: '#fff', fontWeight: 'bold', textAlign: 'center', marginBottom: 50, marginTop: 20 },
