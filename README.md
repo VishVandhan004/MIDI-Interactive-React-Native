@@ -51,7 +51,10 @@ _Coming soon..._
    ```
 
 4. Use Expo Go (Android/iOS) to preview the app.
-
+Use Expo SDK 52 to run this app. Download the Expo Go APK of SDK 52 to run this app. 
+ ```
+ https://expo.dev/go?sdkVersion=52&platform=android&device=true
+ ```
 ---
 
 ## 📁 Folder Structure
