@@ -18,7 +18,7 @@ A mobile MIDI-style musical keyboard built using **React Native**, offering real
 
 ## 📸 Screenshots
 
-![Screenshot](Intro Screen)(Project%20Info/images/2.jpg)
+![Screenshot][Intro Screen](Project%20Info/images/2.jpg)
 ![Screenshot](Project%20Info/images/3.jpg)
 ![Screenshot](Project%20Info/images/4.jpg)
 
